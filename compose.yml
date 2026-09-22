@@ -1,0 +1,95 @@
+services:
+  db-catalog:
+    image: postgres:16-alpine
+    container_name: db-catalog
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_catalog_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-orders:
+    image: postgres:16-alpine
+    container_name: db-orders
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_orders_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ms-catalog:
+    build:
+      context: ./ms-catalog
+      dockerfile: Dockerfile
+    container_name: ms-catalog
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-catalog:5432/mydatabase
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_LIQUIBASE_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db-catalog:
+        condition: service_healthy
+
+  ms-orders:
+    build:
+      context: ./ms-orders
+      dockerfile: Dockerfile
+    container_name: ms-orders
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: db-orders:5432/mydatabase
+      DB_USERNAME: myuser
+      DB_PASSWORD: secret
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-orders:5432/mydatabase
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      MS_CATALOG: http://ms-catalog:8080
+      JWK_SET_URI: https://login.microsoftonline.com/f9bce5c0-eb96-4341-aad7-411ae980b12a/discovery/v2.0/keys
+      ISSUER_URI: https://login.microsoftonline.com/f9bce5c0-eb96-4341-aad7-411ae980b12a/v2.0
+    ports:
+      - "8081:8080"
+    depends_on:
+      db-orders:
+        condition: service_healthy
+      ms-catalog:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      ms-catalog:
+        condition: service_started
+      ms-orders:
+        condition: service_started
+
+volumes:
+  db_catalog_data:
+  db_orders_data:
