@@ -67,8 +67,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       MS_CATALOG: http://ms-catalog:8080
-      JWK_SET_URI: https://login.microsoftonline.com/f9bce5c0-eb96-4341-aad7-411ae980b12a/discovery/v2.0/keys
-      ISSUER_URI: https://login.microsoftonline.com/f9bce5c0-eb96-4341-aad7-411ae980b12a/v2.0
     ports:
       - "8081:8080"
     depends_on:
