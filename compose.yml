@@ -75,6 +75,26 @@ services:
       ms-catalog:
         condition: service_started
 
+  ms-notifications:
+    build:
+      context: ./ms-notifications
+      dockerfile: Dockerfile
+    container_name: ms-notifications
+    environment:
+      SERVER_PORT: 8080
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      APP_RABBITMQ_EXCHANGE: notifications.exchange
+      APP_RABBITMQ_QUEUE: notifications.queue
+      APP_RABBITMQ_ROUTINGKEY: notifications.routingkey
+    ports:
+      - "8082:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
@@ -88,6 +108,25 @@ services:
       ms-orders:
         condition: service_started
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   db_catalog_data:
   db_orders_data:
+  rabbitmq_data:
