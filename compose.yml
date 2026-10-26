@@ -67,6 +67,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       MS_CATALOG: http://ms-catalog:8080
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: admin123
+      APP_RABBITMQ_EXCHANGE: notifications.exchange
+      APP_RABBITMQ_ROUTINGKEY: notifications.routingkey
     ports:
       - "8081:8080"
     depends_on:
@@ -74,6 +80,8 @@ services:
         condition: service_healthy
       ms-catalog:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   ms-notifications:
     build:
@@ -99,6 +107,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # nginx.conf proxies /api/... to the services below
+        VITE_API_BASE_URL: http://localhost:5173
+        VITE_REDIRECT_URI: http://localhost:5173
     container_name: frontend
     ports:
       - "5173:80"
@@ -106,6 +118,8 @@ services:
       ms-catalog:
         condition: service_started
       ms-orders:
+        condition: service_started
+      ms-notifications:
         condition: service_started
 
   rabbitmq:
